@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -22,16 +23,28 @@ jobs:
           mkdir android-project
           unzip -q VictorsByGraceCoop2027_Android_Phone_Build.zip -d android-project
 
-      - name: Build APK
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Run Gradle build
+      - name: Find Gradle project folder
         run: |
-          cd android-project
-          gradle assembleDebug
+          PROJECT_DIR=$(dirname "$(find android-project -name settings.gradle -print -quit)")
+          if [ "$PROJECT_DIR" = "." ] || [ ! -f "$PROJECT_DIR/settings.gradle" ]; then
+            echo "ERROR: Hindi makita ang settings.gradle"
+            find android-project -maxdepth 4 -type f
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Nahanap ang project: $PROJECT_DIR"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        run: gradle assembleDebug
+        working-directory: ${{ env.PROJECT_DIR }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Victors-By-Grace-Coop2027-APK
-          path: android-project/app/build/outputs/apk/debug/app-debug.apk
+          path: android-project/**/app/build/outputs/apk/debug/*.apk
